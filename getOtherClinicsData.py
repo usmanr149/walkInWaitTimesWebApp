@@ -56,7 +56,7 @@ def getOtherClinicsHTML(url='http://www.walkinhealth.ca/directory/walk-in-clinic
         <th style="width: 293px; text-align: center;"><span style="color: #ff0000;"><strong>Name</strong></span></th>
         <th style="width: 175.4px;">
         <p><span style="color: #ff0000;"><strong>Hours Open Today</strong></span></p>
-        <div class="\&quot;radiotext\&quot;" style="text-align: center;" id="EstimatedWaitTime">Estimated Wait Time: {0}</div>
+        <div class="\&quot;radiotext\&quot;" style="text-align: center;" id="EstimatedWaitTime"><p>Estimated Wait Time:</p><p>{0}</p></div>
         </th>
         </tr>
         </thead>

@@ -147,11 +147,13 @@ def getAvgMedicentreWaitTimes(url = "http://" + host + ":" + port + "/updateMedi
 
     avgWaitTime = waitTimes/i
 
+    print(avgWaitTime)
+
     #this if to use the reponse for the getRecommendation function in seconds
     if format != 'html':
         return avgWaitTime*3600
 
-    if int(avgWaitTime) > 0 and int((avgWaitTime - int(avgWaitTime))*60) > 10:
+    if int(avgWaitTime) > 0 or int((avgWaitTime - int(avgWaitTime))*60) > 10:
         formatAvgWaitTimes = str(int(avgWaitTime)) + " hr " + str(int((avgWaitTime - int(avgWaitTime))*60)) + " min"
     else:
         formatAvgWaitTimes = "00 hr and 10 min"
@@ -159,4 +161,4 @@ def getAvgMedicentreWaitTimes(url = "http://" + host + ":" + port + "/updateMedi
 
 
 if __name__ == "__main__":
-    print(getMedicentreHTML())
+    print(getAvgMedicentreWaitTimes())
