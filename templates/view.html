@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="/static/style/style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <!--<script src="/static/javascript/map.js"></script> -->
+    <meta charset="UTF-8">
+</head>
+<body>
+<script>
+
+    var api = "{{api}}"
+
+    var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+//function to get user's location, used in case customer has not enetered an address
+function getLocation(callback){
+    //check if the user has added an address
+    if ($('input[name="address"]').val().length > 0){
+        return $('input[name="address"]').val();
+    } else {
+        if (navigator.geolocation) {
+            show('loading', true);
+            navigator.geolocation.getCurrentPosition(showPosition,showError);
+            function checkLocationValue() {
+                if($('input[name="address"]').val().length === 0) {//we want it to match
+                    setTimeout(checkLocationValue, 250);//wait 250 millisecnds then recheck
+                }
+                else{
+                    show('loading', false);
+                    return $('input[name="address"]').val();
+                }
+            }
+            checkLocationValue();
+        } else {
+            alert("Geolocation is not supported by this browser.");
+            return "";
+        }
+    }
+    //show('loading', false);
+}
+
+//call back function for getCurrent position
+function showPosition(position) {
+    //x.innerHTML = "Latitude: " + position.coords.latitude +
+    //"<br>Longitude: " + position.coords.longitude;
+    $('input[name="address"]').attr('value', position.coords.latitude + "," + position.coords.longitude);
+    $('input[name="address"]').attr('readonly', true);
+}
+
+function setMap() {
+
+        origin_ = getLocation();
+        console.log(origin_)
+
+        if (typeof origin_ === 'undefined'){
+            setTimeout(setMap, 250);//wait 250 millisecnds then rerun the function
+        }else{
+            $('#recommend').html('');
+            newSRC(origin_);
+        }
+    }
+
+function showError(error) {
+        switch(error.code) {
+        case error.PERMISSION_DENIED:
+          //x.innerHTML = "User denied the request for Geolocation.";
+          alert("Enter your address");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          //x.innerHTML = "Location information is unavailable."
+          alert("Location information is unavailable.")
+          break;
+        case error.TIMEOUT:
+          //x.innerHTML = "The request to get user location timed out."
+          alert("The request to get user location timed out.")
+          break;
+        case error.UNKNOWN_ERROR:
+          //x.innerHTML = "An unknown error occurred."
+          alert("An unknown error occurred.")
+          break;
+        }
+    }
+
+function slider(optionSelected){
+    var deferred = $.Deferred();
+    var selectedValue = optionSelected;
+    if (selectedValue === 'hospitals'){
+
+        $.getJSON($SCRIPT_ROOT + '/hospitalWaitTimes', {}, function(data) {
+            $("#radioButtons").html(data.table);
+            deferred.resolve(true);
+        });
+    }
+    else if (selectedValue === 'medicentres'){
+
+        $.getJSON($SCRIPT_ROOT + '/medicentreWaitTimes', {}, function(data) {
+            $("#radioButtons").html(data.table);
+            deferred.resolve(true);
+        });
+    }
+    else if (selectedValue === 'other'){
+
+        $.getJSON($SCRIPT_ROOT + '/otherClinics', {}, function(data) {
+            $("#radioButtons").html(data.table);
+            deferred.resolve(true);
+        });
+    }
+    else{
+        deferred.resolve(true);
+    }
+
+    return deferred.promise();
+}
+
+$(function() {
+  $(".sidenav a").on("click", function() {
+    $(".sidenav a").removeClass("active");
+    $(this).addClass("active");
+    slider(this.getAttribute('value'));
+  });
+});
+
+function recommend(){
+
+    var origin_ = getLocation();
+
+    console.log(origin_);
+
+    if (typeof origin_ != 'undefined'){
+        show('loading', true);
+        var getRecommendation = function(e) {
+          $.getJSON($SCRIPT_ROOT + '/recommend', {
+            origin: origin_,
+            mode: $('input[name="moderadio"]:checked').val()
+          }, function(data) {
+            var where = data.where;
+            var type = data.type;
+            var time_ = data.bestTime;
+            var promise = slider(type);
+            //console.log(type);
+            console.log(where);
+            //console.log(typeof(where));
+            console.log(time_);
+            promise.then(function(result) {
+                if (type == null){
+                    alert("Please review your address.");
+                    show('loading', false);
+                } else{
+                    $('label:contains(' + where +')').children()[0].checked = true;
+                    newSRC(origin_);
+                    $('#recommend').html('<p>Recommendation: ' + where + '<\p><p>You will be seen by approximately ' + time_ + '<\p>');
+                    show('loading', false);
+                }
+            });
+          });
+          return false;
+        };
+
+        getRecommendation();
+    }else{
+        setTimeout(recommend, 250);
+    }
+
+}
+
+function newSRC(origin){
+
+        if (typeof $('input[name="optradio"]:checked').val() != 'undefined'){
+            //console.log(api);
+            if  ($('input[name="moderadio"]:checked').val() === 'CAR'){
+                mode = 'driving';
+            } else if ($('input[name="moderadio"]:checked').val()=== 'WALK'){
+                mode='walking';
+            //https://www.google.com/maps/embed/v1/directions?key=AIzaSyCvOjE24t9SieoZvDM9liAbxsjaYiFvEyk&origin=53.5526619%2C-113.488818&destination=Misericordia%2BCommunity%2BHospital%2CEdmonton&mode=WALKING&avoid=tolls|highways
+
+            } else{
+                mode = 'transit';
+            }
+            url = "https://www.google.com/maps/embed/v1/directions" +
+                        "?key=" + encodeURIComponent(api) +
+                        "&origin=" + encodeURIComponent(origin) +
+                        "&destination=" + encodeURIComponent($('input[name="optradio"]:checked').val()) +
+                        "&mode=" + mode +
+                        "&avoid=tolls|highways";
+            console.log($('input[name="optradio"]:checked').val());
+            console.log(url);
+            document.getElementById('iFrame').setAttribute('src', url);
+        } else {
+            //check if the user has selected a clinic, if not then throw an alert.
+            alert("Make a selection or Get a recommendation")
+        }
+
+    }
+
+function show(id, value) {
+    document.getElementById(id).style.display = value ? 'block' : 'none';
+}
+
+
+</script>
+<div class="sidenav" name="clinic_options" id="nav_bar">
+  <a href="#" value="hospitals" onclick="slider()" class="active">Hospital Emergency</a>
+  <a href="#" value="medicentres" onclick="slider()">Medicentre</a>
+  <a href="#" value="other" onclick="slider()">Other Walk-in Clinics</a>
+    <a href="#" value="recommendation" onclick="recommend()">Get a Recommendation</a>
+</div>
+
+<div class="main">
+        <div>
+        <label>Mode of Travel:</label><br>
+      <input type="radio" name="moderadio" value="TRANSIT" checked> Transit
+      <input type="radio" name="moderadio" value="WALK"> Walk
+      <input type="radio" name="moderadio" value="CAR"> Car
+    </form>
+    </div>
+    <table width="80%" height="600px">
+        <tbody>
+        <tr>
+    <td width="50%">
+        <div id="radioButtons" style="border: 1px; height: 100%; overflow: auto;">{{table|safe}}
+        </div>
+    </td>
+    <td width="50%" style="text-align: center;">
+      <iframe id="iFrame" src="https://www.google.com/maps/embed/v1/place?key={{api}}
+                &amp;q=Edmonton,AB" width="400px" height="400px" align="centre|top">
+    </iframe>
+    </td>
+    </tr>
+</tbody>
+</table>
+    <form>
+    Your location: <input type="text" name="address" placeholder="Enter an address!" value="">
+</form>
+<button onclick="setMap()">Get Directions</button>
+    <div id="recommend"></div>
+</div>
+<div id="loading"></div>
+</body>
+</html>

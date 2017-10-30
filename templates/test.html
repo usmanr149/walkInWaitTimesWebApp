@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<style>
+body {
+    font-family: "Lato", sans-serif;
+}
+
+.sidenav {
+    height: 100%;
+    width: 250px;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    background-color: #111;
+    overflow-x: hidden;
+    padding-top: 20px;
+}
+
+.sidenav a {
+    padding: 6px 6px 6px 32px;
+    text-decoration: none;
+    font-size: 25px;
+    color: #818181;
+    display: block;
+}
+
+.sidenav a:hover {
+    color: #f1f1f1;
+}
+
+.sidenav a.active {
+    background-color: #4CAF50; /* Add a green color to the "active/current" link */
+    color: white;
+}
+
+.main {
+    margin-left: 250px; /* Same as the width of the sidenav */
+}
+
+@media screen and (max-height: 450px) {
+  .sidenav {padding-top: 15px;}
+  .sidenav a {font-size: 18px;}
+}
+
+#loading {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(192, 192, 192, 0.5);
+    background-image: url("http://i.stack.imgur.com/MnyxU.gif");
+    background-repeat: no-repeat;
+    background-position: center;
+}
+</style>
+</head>
+<body>
+<script>
+
+    var api = "{{api}}"
+
+    var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+    $(function() {
+    var updateHospitalWaittimes = function(e) {
+      $.getJSON($SCRIPT_ROOT + '/updateHospitalWaitTimes', {}, function(data) {
+        var obj = data.result;
+        for (var key in obj){
+            $("#" + key).text(obj[key]);
+        }
+      });
+      return false;
+    };
+
+    var updateMedicentreWaittimes = function(e) {
+      $.getJSON($SCRIPT_ROOT + '/updateMedicentreWaitTimes', {}, function(data) {
+        var obj = data.result;
+        for (var key in obj){
+            $("#" + key).html(obj[key]);
+        }
+      });
+      return false;
+    };
+
+    var interval = 1000 * 60 * 2;
+
+    var updates = function(e){
+        updateHospitalWaittimes();
+        updateMedicentreWaittimes();
+    }
+
+    setInterval(updates, interval);
+    });
+
+    var x = document.getElementById("demo");
+
+    function getLocation(){
+        //check if the user has added an address
+        if ($('input[name="address"]').val().length > 0){
+            return $('input[name="address"]').val();
+        } else {
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition,showError);
+                return $('input[name="address"]').val();
+            } else {
+                x.innerHTML = "Geolocation is not supported by this browser.";
+                return $('input[name="address"]').attr('value', "Edmonton,AB");
+            }
+        }
+    }
+
+    function setLocation() {
+        //check if the user has added an address
+        if ($('input[name="address"]').val().length > 0){
+            newSRC($('input[name="address"]').val());
+        } else {
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition,showError);
+            } else {
+                x.innerHTML = "Geolocation is not supported by this browser.";
+                $('input[name="address"]').attr('value', "Edmonton,AB");
+            }
+        }
+    }
+
+    function showError(error) {
+        switch(error.code) {
+        case error.PERMISSION_DENIED:
+          //x.innerHTML = "User denied the request for Geolocation.";
+          alert("Enter your address");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          x.innerHTML = "Location information is unavailable."
+          break;
+        case error.TIMEOUT:
+          x.innerHTML = "The request to get user location timed out."
+          break;
+        case error.UNKNOWN_ERROR:
+          x.innerHTML = "An unknown error occurred."
+          break;
+        }
+    }
+
+    function showPosition(position) {
+        //x.innerHTML = "Latitude: " + position.coords.latitude +
+        //"<br>Longitude: " + position.coords.longitude;
+        $('input[name="address"]').attr('value', position.coords.latitude + "," + position.coords.longitude);
+        $('input[name="address"]').attr('readonly', true);
+        newSRC(position.coords.latitude + "," + position.coords.longitude)
+
+    }
+
+    function newSRC(origin){
+
+        //console.log(api);
+        url = "https://www.google.com/maps/embed/v1/directions" +
+                    "?key=" + encodeURIComponent(api) +
+                    "&origin=" + encodeURIComponent(origin) +
+                    "&destination=" + encodeURIComponent($('input[name="optradio"]:checked').val()) +
+                    "&mode=transit" +
+                    "&avoid=tolls|highways";
+        console.log($('input[name="optradio"]:checked').val());
+        console.log(url);
+        document.getElementById('iFrame').setAttribute('src', url);
+
+    }
+
+    function saab(optionSelected){
+		var deferred = $.Deferred();
+        var selectedValue = optionSelected;
+        if (selectedValue === 'hospitals'){
+
+            $.getJSON($SCRIPT_ROOT + '/updateTimes', {}, function(data) {
+                $("#radioButtons").html(data.table);
+				deferred.resolve(true);
+            });
+        }
+        else if (selectedValue === 'medicentres'){
+
+            $.getJSON($SCRIPT_ROOT + '/medicentreWaitTimes', {}, function(data) {
+                $("#radioButtons").html(data.table);
+				deferred.resolve(true);
+            });
+        }
+        else if (selectedValue === 'other'){
+
+            $.getJSON($SCRIPT_ROOT + '/otherClinics', {}, function(data) {
+                $("#radioButtons").html(data.table);
+				deferred.resolve(true);
+            });
+        }
+        else{
+            deferred.resolve(true);
+        }
+
+	return deferred.promise();
+    }
+
+    $(function() {
+      $(".sidenav a").on("click", function() {
+        $(".sidenav a").removeClass("active");
+        $(this).addClass("active");
+        saab(this.getAttribute('value'));
+      });
+    });
+
+    function recommend(){
+
+        var origin_ = getLocation();
+
+        if (origin_){
+            show('loading', true);
+            var getRecommendation = function(e) {
+              $.getJSON($SCRIPT_ROOT + '/recommend', {
+                origin: origin_
+              }, function(data) {
+                var where = data.where;
+                var type = data.type;
+                var time_ = data.bestTime;
+                var promise = saab(type);
+                //console.log(type);
+                console.log(where);
+                //console.log(typeof(where));
+                console.log(time_);
+                promise.then(function(result) {
+                    if (type == null){
+                        alert("Please review your address.");
+                        show('loading', false);
+                    } else{
+                        $('label:contains(' + where +')').children()[0].checked = true;
+                        newSRC(origin_);
+                        $('#recommend').html('<p>Recommendation: ' + where + '<\p><p>You will be seen by approximately ' + time_ + '<\p>');
+                        show('loading', false);
+                    }
+                });
+              });
+              return false;
+            };
+
+            getRecommendation();
+        }
+    }
+
+    function show(id, value) {
+        document.getElementById(id).style.display = value ? 'block' : 'none';
+    }
+
+</script>
+<div class="sidenav" name="clinic_options" id="nav_bar">
+  <a href="#" value="hospitals" onclick="saab()" class="active">Hospital Emergency</a>
+  <a href="#" value="medicentres" onclick="saab()">Medicentre</a>
+  <a href="#" value="other" onclick="saab()">Other Walk-in Clinics</a>
+    <a href="#" value="recommendation" onclick="recommend()">Get a Recommendation</a>
+</div>
+
+<div class="main">
+    <table width="80%" height="600px">
+        <tbody>
+        <tr>
+    <td width="50%">
+        <div id="radioButtons" style="border: 1px; height: 100%; overflow: auto;">{{table|safe}}
+        </div>
+    </td>
+    <td width="50%" style="text-align: center;">
+      <iframe id="iFrame" src="https://www.google.com/maps/embed/v1/place?key={{api}}
+                &amp;q=Edmonton,AB" width="400px" height="400px" align="centre|top">
+    </iframe>
+    </td>
+    </tr>
+</tbody>
+</table>
+    <form>
+    Your location: <input type="text" name="address" placeholder="Enter an address!">
+</form>
+<button onclick="setLocation()">Get Directions</button>
+    <div id="recommend"></div>
+</div>
+<div id="loading"></div>
+</body>
+</html>
