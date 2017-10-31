@@ -107,6 +107,7 @@ def getHospitalWaitTimes(loc, hospital_response):
 
 
 def getRecommendation(address, mode='TRANSIT'):
+    print(address)
 
     if mode=='TRANSIT':
         mode = "TRANSIT,WALK"
@@ -122,8 +123,9 @@ def getRecommendation(address, mode='TRANSIT'):
             correctAddress = True
             add = [g.latlng[0], g.latlng[1]]
 
-
-    bestTIme = None
+    print(add)
+    print(mode)
+    bestTime = None
     recomendation = None
     typeofrecommendation = None
 
@@ -145,7 +147,7 @@ def getRecommendation(address, mode='TRANSIT'):
                 urllib.parse.quote(time_.strftime("%I:%M%p")),
                 urllib.parse.quote(time_.strftime("%m-%d-%Y")),
                 mode, port2)
-            #print(url)
+            print(url)
             try:
                 response = requests.get(url).json()
                 #the response is the unix timestamp in milliseconds
@@ -157,8 +159,8 @@ def getRecommendation(address, mode='TRANSIT'):
                     # print(arrTime)
                     #print("Estimated time to being seen: ", datetime.datetime.fromtimestamp(arrTime/1000).strftime('%Y-%m-%d %H:%M:%S.%f'))
                     #print("-------------------")
-                    if bestTIme == None or arrTime < bestTIme:
-                        bestTIme = arrTime
+                    if bestTime == None or arrTime < bestTime:
+                        bestTime = arrTime
                         recomendation = k
                         typeofrecommendation = 'hospitals'
                 elif "Medicentre" in k:
@@ -171,8 +173,8 @@ def getRecommendation(address, mode='TRANSIT'):
                     # print(checkMedicentreOpenCloseTime(arrTime, k))
                     #print("-------------------")
                     if checkMedicentreOpenCloseTime(arrTime, k):
-                        if bestTIme == None or arrTime < bestTIme:
-                            bestTIme = arrTime
+                        if bestTime == None or arrTime < bestTime:
+                            bestTime = arrTime
                             recomendation = k
                             typeofrecommendation = 'medicentres'
                 else:
@@ -184,20 +186,20 @@ def getRecommendation(address, mode='TRANSIT'):
                     # print(checkWalInClinicOpenClose(arrTime, k))
                     #print("-------------------")
                     if checkWalInClinicOpenClose(arrTime, k):
-                        if bestTIme == None or arrTime < bestTIme:
-                            bestTIme = arrTime
+                        if bestTime == None or arrTime < bestTime:
+                            bestTime = arrTime
                             recomendation = k
                             typeofrecommendation = 'other'
             except KeyError:
                 pass
                 # print("PATH_NOT_FOUND")
 
-        return bestTIme, recomendation, typeofrecommendation
-    return bestTIme, recomendation, typeofrecommendation
+        return bestTime, recomendation, typeofrecommendation
+    return bestTime, recomendation, typeofrecommendation
 
 
 if __name__ == "__main__":
-    #print(getRecommendation("53.5526619,-113.488818"))
+    print(getRecommendation("53.5526619,-113.488818"))
     #print(getRecommendation("Century Place, Edmonton"))
-    medicentre_response = requests.get("http://" + host + ":" + port + "/updateMedicentreWaitTimes").json()
-    print(getMedicentreWaitTime("Kingsway Medicentre", medicentre_response))
+    #medicentre_response = requests.get("http://" + host + ":" + port + "/updateMedicentreWaitTimes").json()
+    #print(getMedicentreWaitTime("Kingsway Medicentre", medicentre_response))

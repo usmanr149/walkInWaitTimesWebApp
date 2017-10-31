@@ -147,7 +147,6 @@ def getAvgMedicentreWaitTimes(url = "http://" + host + ":" + port + "/updateMedi
 
     avgWaitTime = waitTimes/i
 
-    print(avgWaitTime)
 
     #this if to use the reponse for the getRecommendation function in seconds
     if format != 'html':

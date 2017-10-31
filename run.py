@@ -108,6 +108,12 @@ def view():
     table = getHTML(hospital_wait_times, time)
     return render_template("view.html", table=table, api=api)
 
+@app.route('/test')
+def test():
+    hospital_wait_times, time = getHospitalWaitTimes()
+    table = getHTML(hospital_wait_times, time)
+    return render_template("test.html", table=table, api=api)
+
 
 if __name__ == '__main__':
     app.run(debug=True, host=host,port=int(port), threaded=True)
